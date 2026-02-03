@@ -16,11 +16,8 @@ operations via HTTP.
 
 In `operator`, a *transaction* is an in-process consistency boundary - typically an SQL transaction.
 
-This library is designed for systems where:
-
-  - application state lives primarily in one database
-  - transactional guarantees are provided by that database
-  - all work happens within a single process
+This library is designed for systems where application state lives primarily in a single database,
+one providing transactional guarantees.
 
 Distributed transactions, two-phase commit, sagas, and cross-system coordination are
 explicitly out of scope.
@@ -43,7 +40,7 @@ The goal is not to solve distributed consistency, but to make local consistency 
   - you don't want transactional mechanisms leaking into HTTP handlers
   - you prefer explicit control over framework magic
 
-It works especially well for CRUD-plus systems that have grown beyond "simple handlers",
+It works especially well for CRUD+ systems that have grown beyond "simple handlers",
 where concerns like auditing, invariants, and side effects start to accumulate.
 
 You probably *don’t* need `operator` if:
@@ -52,7 +49,7 @@ You probably *don’t* need `operator` if:
   - you rely heavily on distributed workflows or eventual consistency
   - your persistence layer doesn’t support transactions at all
 
-`operator` doesn’t try to be a framework. It provides a small, well-defined execution model
+`operator` doesn’t try to be a framework - it provides a small, well-defined execution model
 for application services, and then gets out of the way.
 
 ## Core Concepts
