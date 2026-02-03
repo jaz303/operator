@@ -4,7 +4,7 @@
 transactional boundaries, synchronous domain events, and simple adapters for exposing
 operations via HTTP.
 
-`operator` is a disciplined way to execute business logic:
+It's a disciplined way to execute business logic:
 
   - every request runs inside an operation, decoupled from HTTP
   - transactions are lazy and explicit
@@ -16,8 +16,8 @@ operations via HTTP.
 
 In `operator`, a *transaction* is an in-process consistency boundary - typically an SQL transaction.
 
-This library is designed for systems where application state lives primarily in a single database,
-one providing transactional guarantees.
+This library is designed for systems where application state lives primarily in a single database
+that provides transactional guarantees.
 
 Distributed transactions, two-phase commit, sagas, and cross-system coordination are
 explicitly out of scope.
