@@ -17,10 +17,8 @@ It's a disciplined way to execute business logic:
 In `operator`, a *transaction* is an in-process consistency boundary - typically an SQL transaction.
 
 This library is designed for systems where application state lives primarily in a single database
-that provides transactional guarantees.
-
-Distributed transactions, two-phase commit, sagas, and cross-system coordination are
-explicitly out of scope.
+that provides transactional guarantees. Distributed transactions, two-phase commit, sagas, and
+cross-system coordination are explicitly out of scope.
 
 That said, `operator` is compatible with common patterns for crossing process boundaries.
 In particular, synchronous domain events make it easy to implement patterns such as the
