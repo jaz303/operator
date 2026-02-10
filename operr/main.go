@@ -15,6 +15,6 @@ func DefaultErrorMapper(w http.ResponseWriter, err error) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusInternalServerError)
 	json.NewEncoder(w).Encode(map[string]any{
-		"error": err,
+		"error": err.Error(),
 	})
 }
