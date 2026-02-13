@@ -58,8 +58,12 @@ func (o *OpContext[T]) Tx() (T, error) {
 }
 
 // Register an event to be dispatched upon completion of the operation.
-func (o *OpContext[T]) Emit(evt Event) {
+func (o *OpContext[T]) Emit(evt Event) error {
+	if o.state <= stateDispatchEvents {
+		return ErrInvalidState
+	}
 	o.events = append(o.events, evt)
+	return nil
 }
 
 // Register a function to be invoked upon completion of the operation.
@@ -126,7 +130,9 @@ func (o *OpContext[T]) invokeAfterFuncs() {
 }
 
 func (o *OpContext[T]) dispatchEvents() error {
-	for _, evt := range o.events {
+	for len(o.events) > 0 {
+		evt := o.events[0]
+		o.events = o.events[1:]
 		if err := o.hub.dispatchEvent(o, evt); err != nil {
 			return err
 		}
