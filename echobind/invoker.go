@@ -3,7 +3,7 @@ package echobind
 import (
 	"context"
 
-	"github.com/jaz303/operator"
+	"github.com/jaz303/operator/v2"
 	"github.com/labstack/echo/v5"
 )
 

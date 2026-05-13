@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-// TODO: per-operation cache?
 // TODO: logging/tracing functionality
 
 // TODO: do we need an option to dispatch an event immediately?

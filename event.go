@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	errorInterface = reflect.TypeOf((*error)(nil)).Elem()
+	errorInterface = reflect.TypeFor[error]()
 )
 
 type Event interface {
@@ -44,7 +44,7 @@ func makeEventHandler[Tx Transaction, Ext any](eventType reflect.Type, fn any) e
 	switch val.Type().NumIn() {
 	case 2:
 		ctxType := val.Type().In(0)
-		if !reflect.TypeOf(&OpContext[Tx, Ext]{}).AssignableTo(ctxType) {
+		if !reflect.TypeFor[*OpContext[Tx, Ext]]().AssignableTo(ctxType) {
 			panic(fmt.Errorf("OpContext[Tx] is not assigned to event handler context parameter %s", ctxType))
 		}
 		hnd.hasContext = true

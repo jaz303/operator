@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/jaz303/operator"
-	"github.com/jaz303/operator/operr"
+	"github.com/jaz303/operator/v2"
+	"github.com/jaz303/operator/v2/operr"
 )
 
 // Bind() creates an an Invoker binding the operation to an HTTP endpoint

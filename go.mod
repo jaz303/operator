@@ -1,4 +1,4 @@
-module github.com/jaz303/operator
+module github.com/jaz303/operator/v2
 
 go 1.25.1
 
