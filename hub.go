@@ -3,6 +3,7 @@ package operator
 import (
 	"context"
 	"reflect"
+	"time"
 )
 
 // A Hub is the central object through which operations are invoked, comprising
@@ -51,6 +52,8 @@ func (h *Hub[Tx]) RegisterEventHandler(event Event, hnd any) {
 func (h *Hub[Tx]) BeginOperation(ctx context.Context) *OpContext[Tx] {
 	return &OpContext[Tx]{
 		Context: ctx,
+
+		now: time.Now(),
 
 		hub:              h,
 		beginTransaction: h.beginTransaction,

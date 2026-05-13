@@ -2,6 +2,7 @@ package operator
 
 import (
 	"context"
+	"time"
 )
 
 // TODO: per-operation cache?
@@ -35,6 +36,7 @@ type OpContext[T Transaction] struct {
 
 	hub              *Hub[T]
 	beginTransaction TransactionProvider[T]
+	now              time.Time
 
 	state int
 
@@ -42,6 +44,9 @@ type OpContext[T Transaction] struct {
 	events   []Event
 	after    []AfterFunc[T]
 }
+
+// Now() returns the time at which the operation was started
+func (o *OpContext[T]) Now() time.Time { return o.now }
 
 // Return the operation's transaction, creating a new transaction if not
 // already started.
