@@ -184,7 +184,21 @@ hub.RegisterEventHandler(&UserCreated{}, func(ctx *operator.OpContext[Tx, *ident
 })
 ```
 
-### 4. Define an Operation
+### 4. (optional) Define Type Aliases
+
+With `Tx` and `Ext` fixed for your application, writing `operator.OpContext[Tx, *identityMap]` everywhere is noisy. A small aliases file — often in a `domain` package — keeps application code tidy:
+
+```golang
+type (
+    Ctx          = operator.OpContext[Tx, *identityMap]
+    Hub          = operator.Hub[Tx, *identityMap]
+    Op[I, O any] = operator.Operation[Tx, *identityMap, I, O]
+)
+```
+
+The rest of your application uses `*Ctx`, `*Hub`, and `Op[Input, Output]` without ever seeing the underlying type parameters.
+
+### 5. Define an Operation
 
 An Operation is just a Go function that accepts an `*operator.OpContext[Tx, Ext]` and input arguments,
 and returns an output value or error.
@@ -214,7 +228,7 @@ func CreateUser(ctx *operator.OpContext[Tx, Ext], in *CreateUserInput) (*CreateU
 }
 ```
 
-### 5. Invoke the Operation
+### 6. Invoke the Operation
 
 ```golang
 out, err := operator.Invoke(ctx, hub, CreateUser, &CreateUserInput{
