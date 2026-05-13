@@ -13,7 +13,7 @@ var ErrRecovered = errors.New("operation recovered from panic")
 // The supplied *Hub is used as a transaction provider and event dispatcher.
 //
 // Returns the operation's output on success, or error on failure.
-func Invoke[Tx Transaction, I any, O any](ctx context.Context, hub *Hub[Tx], op Operation[Tx, I, O], input *I) (*O, error) {
+func Invoke[Tx Transaction, Ext any, I any, O any](ctx context.Context, hub *Hub[Tx, Ext], op Operation[Tx, Ext, I, O], input *I) (*O, error) {
 	opCtx := hub.BeginOperation(ctx)
 
 	output, err := invokeWithRecover(func() (*O, error) {
@@ -37,7 +37,7 @@ func Invoke[Tx Transaction, I any, O any](ctx context.Context, hub *Hub[Tx], op 
 // The supplied *Hub is used as a transaction provider and event dispatcher.
 //
 // Returns the operation's output on success, or error on failure.
-func InvokeTx[Tx Transaction, I any, O any](ctx context.Context, hub *Hub[Tx], op TxOperation[Tx, I, O], input *I) (*O, error) {
+func InvokeTx[Tx Transaction, Ext any, I any, O any](ctx context.Context, hub *Hub[Tx, Ext], op TxOperation[Tx, Ext, I, O], input *I) (*O, error) {
 	opCtx := hub.BeginOperation(ctx)
 
 	tx, err := opCtx.Tx()

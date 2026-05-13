@@ -19,11 +19,11 @@ var _ Event = &testEvent{}
 var eventType = reflect.TypeOf(&testEvent{})
 
 func TestEventHandler_StdlibContext_Event(t *testing.T) {
-	opCtx := &OpContext[*TxTest]{
+	opCtx := &OpContext[*TxTest, int]{
 		Context: context.Background(),
 	}
 
-	hnd := makeEventHandler[*TxTest](eventType, func(ctx context.Context, ev *testEvent) {
+	hnd := makeEventHandler[*TxTest, int](eventType, func(ctx context.Context, ev *testEvent) {
 		assert.Equal(t, 123, ev.Val)
 		assert.Equal(t, opCtx, ctx)
 	})
@@ -34,11 +34,11 @@ func TestEventHandler_StdlibContext_Event(t *testing.T) {
 }
 
 func TestEventHandler_OpContext_Event(t *testing.T) {
-	opCtx := &OpContext[*TxTest]{
+	opCtx := &OpContext[*TxTest, int]{
 		Context: context.Background(),
 	}
 
-	hnd := makeEventHandler[*TxTest](eventType, func(ctx *OpContext[*TxTest], ev *testEvent) {
+	hnd := makeEventHandler[*TxTest, int](eventType, func(ctx *OpContext[*TxTest, int], ev *testEvent) {
 		assert.Equal(t, 456, ev.Val)
 		assert.Equal(t, opCtx, ctx)
 	})
@@ -49,11 +49,11 @@ func TestEventHandler_OpContext_Event(t *testing.T) {
 }
 
 func TestEventHandler_Event(t *testing.T) {
-	opCtx := &OpContext[*TxTest]{
+	opCtx := &OpContext[*TxTest, int]{
 		Context: context.Background(),
 	}
 
-	hnd := makeEventHandler[*TxTest](eventType, func(ev *testEvent) {
+	hnd := makeEventHandler[*TxTest, int](eventType, func(ev *testEvent) {
 		assert.Equal(t, 789, ev.Val)
 	})
 
@@ -63,11 +63,11 @@ func TestEventHandler_Event(t *testing.T) {
 }
 
 func TestEventHandler_StdlibContext_Any(t *testing.T) {
-	opCtx := &OpContext[*TxTest]{
+	opCtx := &OpContext[*TxTest, int]{
 		Context: context.Background(),
 	}
 
-	hnd := makeEventHandler[*TxTest](eventType, func(ctx context.Context, ev any) {
+	hnd := makeEventHandler[*TxTest, int](eventType, func(ctx context.Context, ev any) {
 		assert.Equal(t, 123, ev.(*testEvent).Val)
 		assert.Equal(t, opCtx, ctx)
 	})
@@ -78,11 +78,11 @@ func TestEventHandler_StdlibContext_Any(t *testing.T) {
 }
 
 func TestEventHandler_OpContext_Any(t *testing.T) {
-	opCtx := &OpContext[*TxTest]{
+	opCtx := &OpContext[*TxTest, int]{
 		Context: context.Background(),
 	}
 
-	hnd := makeEventHandler[*TxTest](eventType, func(ctx *OpContext[*TxTest], ev any) {
+	hnd := makeEventHandler[*TxTest, int](eventType, func(ctx *OpContext[*TxTest, int], ev any) {
 		assert.Equal(t, 456, ev.(*testEvent).Val)
 		assert.Equal(t, opCtx, ctx)
 	})
@@ -93,11 +93,11 @@ func TestEventHandler_OpContext_Any(t *testing.T) {
 }
 
 func TestEventHandler_Any(t *testing.T) {
-	opCtx := &OpContext[*TxTest]{
+	opCtx := &OpContext[*TxTest, int]{
 		Context: context.Background(),
 	}
 
-	hnd := makeEventHandler[*TxTest](eventType, func(ev any) {
+	hnd := makeEventHandler[*TxTest, int](eventType, func(ev any) {
 		assert.Equal(t, 789, ev.(*testEvent).Val)
 	})
 
@@ -109,11 +109,11 @@ func TestEventHandler_Any(t *testing.T) {
 func TestErrorReturn(t *testing.T) {
 	err := errors.New("test error")
 
-	opCtx := &OpContext[*TxTest]{
+	opCtx := &OpContext[*TxTest, int]{
 		Context: context.Background(),
 	}
 
-	hnd := makeEventHandler[*TxTest](eventType, func(ev any) error {
+	hnd := makeEventHandler[*TxTest, int](eventType, func(ev any) error {
 		return err
 	})
 

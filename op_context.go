@@ -31,26 +31,29 @@ const (
 //
 // OpContext wraps context.Context so can be passed to any method that
 // expects one of these.
-type OpContext[T Transaction] struct {
+type OpContext[Tx Transaction, Ext any] struct {
 	context.Context
 
-	hub              *Hub[T]
-	beginTransaction TransactionProvider[T]
+	hub              *Hub[Tx, Ext]
+	beginTransaction TransactionProvider[Tx]
+	ext              func() Ext
 	now              time.Time
 
 	state int
 
-	activeTx T
+	activeTx Tx
 	events   []Event
-	after    []AfterFunc[T]
+	after    []AfterFunc[Tx, Ext]
 }
 
 // Now() returns the time at which the operation was started
-func (o *OpContext[T]) Now() time.Time { return o.now }
+func (o *OpContext[T, E]) Now() time.Time { return o.now }
+
+func (o *OpContext[T, E]) Ext() E { return o.ext() }
 
 // Return the operation's transaction, creating a new transaction if not
 // already started.
-func (o *OpContext[T]) Tx() (T, error) {
+func (o *OpContext[T, E]) Tx() (T, error) {
 	var zero T
 	if !o.isTransactionActive() {
 		tx, err := o.beginTransaction(o.Context)
@@ -63,7 +66,7 @@ func (o *OpContext[T]) Tx() (T, error) {
 }
 
 // Register an event to be dispatched upon completion of the operation.
-func (o *OpContext[T]) Emit(evt Event) error {
+func (o *OpContext[T, E]) Emit(evt Event) error {
 	if o.state <= stateDispatchEvents {
 		return ErrInvalidState
 	}
@@ -75,7 +78,7 @@ func (o *OpContext[T]) Emit(evt Event) error {
 // The callback is invoked after the transaction (if any) is committed.
 // After callbacks can be registered by the main operation, as well as
 // any triggered event handlers.
-func (o *OpContext[T]) AfterFunc(fn AfterFunc[T]) error {
+func (o *OpContext[T, E]) AfterFunc(fn AfterFunc[T, E]) error {
 	if o.state != stateActive && o.state != stateDispatchEvents {
 		return ErrInvalidState
 	}
@@ -83,7 +86,7 @@ func (o *OpContext[T]) AfterFunc(fn AfterFunc[T]) error {
 	return nil
 }
 
-func (o *OpContext[T]) commit() error {
+func (o *OpContext[T, E]) commit() error {
 	if o.state != stateActive {
 		return ErrInvalidState
 	}
@@ -114,7 +117,7 @@ func (o *OpContext[T]) commit() error {
 	return nil
 }
 
-func (o *OpContext[T]) rollback() error {
+func (o *OpContext[T, E]) rollback() error {
 	if o.state != stateActive {
 		return ErrInvalidState
 	}
@@ -128,13 +131,13 @@ func (o *OpContext[T]) rollback() error {
 	return nil
 }
 
-func (o *OpContext[T]) invokeAfterFuncs() {
+func (o *OpContext[T, E]) invokeAfterFuncs() {
 	for _, fn := range o.after {
 		fn(o)
 	}
 }
 
-func (o *OpContext[T]) dispatchEvents() error {
+func (o *OpContext[T, E]) dispatchEvents() error {
 	for len(o.events) > 0 {
 		evt := o.events[0]
 		o.events = o.events[1:]
@@ -145,7 +148,7 @@ func (o *OpContext[T]) dispatchEvents() error {
 	return nil
 }
 
-func (o *OpContext[T]) isTransactionActive() bool {
+func (o *OpContext[T, E]) isTransactionActive() bool {
 	var zero T
 	return o.activeTx != zero
 }

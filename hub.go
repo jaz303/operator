@@ -3,6 +3,7 @@ package operator
 import (
 	"context"
 	"reflect"
+	"sync"
 	"time"
 )
 
@@ -11,16 +12,18 @@ import (
 //
 // Once a Hub is configured, use the package-level Invoke() function to invoke
 // operations.
-type Hub[Tx Transaction] struct {
+type Hub[Tx Transaction, Ext any] struct {
 	beginTransaction TransactionProvider[Tx]
-	eventHandlers    map[reflect.Type][]eventHandler[Tx]
+	createExt        func() Ext
+	eventHandlers    map[reflect.Type][]eventHandler[Tx, Ext]
 }
 
 // NewHub() returns a hub configured with a transaction provider.
-func NewHub[Tx Transaction](transactionProvider TransactionProvider[Tx]) *Hub[Tx] {
-	return &Hub[Tx]{
+func NewHub[Tx Transaction, Ext any](transactionProvider TransactionProvider[Tx], createExt func() Ext) *Hub[Tx, Ext] {
+	return &Hub[Tx, Ext]{
 		beginTransaction: transactionProvider,
-		eventHandlers:    map[reflect.Type][]eventHandler[Tx]{},
+		createExt:        createExt,
+		eventHandlers:    map[reflect.Type][]eventHandler[Tx, Ext]{},
 	}
 }
 
@@ -42,25 +45,26 @@ func NewHub[Tx Transaction](transactionProvider TransactionProvider[Tx]) *Hub[Tx
 // error, the transaction aborts and is rolled back - this is by design;
 // event handlers are not intended for "fire and forget" use - use AfterFunc()
 // for that.
-func (h *Hub[Tx]) RegisterEventHandler(event Event, hnd any) {
+func (h *Hub[Tx, Ext]) RegisterEventHandler(event Event, hnd any) {
 	ty := reflect.TypeOf(event)
-	h.eventHandlers[ty] = append(h.eventHandlers[ty], makeEventHandler[Tx](ty, hnd))
+	h.eventHandlers[ty] = append(h.eventHandlers[ty], makeEventHandler[Tx, Ext](ty, hnd))
 }
 
 // Begin a new operation and returns its context.
 // User code will usually not call BeginOperation directly; use Invoke().
-func (h *Hub[Tx]) BeginOperation(ctx context.Context) *OpContext[Tx] {
-	return &OpContext[Tx]{
+func (h *Hub[Tx, Ext]) BeginOperation(ctx context.Context) *OpContext[Tx, Ext] {
+	return &OpContext[Tx, Ext]{
 		Context: ctx,
 
 		now: time.Now(),
 
 		hub:              h,
+		ext:              sync.OnceValue(h.createExt),
 		beginTransaction: h.beginTransaction,
 	}
 }
 
-func (h *Hub[Tx]) dispatchEvent(op *OpContext[Tx], evt Event) error {
+func (h *Hub[Tx, Ext]) dispatchEvent(op *OpContext[Tx, Ext], evt Event) error {
 	for _, hnd := range h.eventHandlers[reflect.TypeOf(evt)] {
 		if err := hnd.Dispatch(op, evt); err != nil {
 			return err

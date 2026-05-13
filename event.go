@@ -13,11 +13,11 @@ type Event interface {
 	EventName() string
 }
 
-type eventHandler[Tx Transaction] interface {
-	Dispatch(op *OpContext[Tx], evt any) error
+type eventHandler[Tx Transaction, Ext any] interface {
+	Dispatch(op *OpContext[Tx, Ext], evt any) error
 }
 
-func makeEventHandler[Tx Transaction](eventType reflect.Type, fn any) eventHandler[Tx] {
+func makeEventHandler[Tx Transaction, Ext any](eventType reflect.Type, fn any) eventHandler[Tx, Ext] {
 	val := reflect.ValueOf(fn)
 	if val.Kind() != reflect.Func {
 		panic(fmt.Errorf("event handler type %T is not a function", fn))
@@ -35,7 +35,7 @@ func makeEventHandler[Tx Transaction](eventType reflect.Type, fn any) eventHandl
 		panic(fmt.Errorf("event handler must return 0..1 values"))
 	}
 
-	hnd := genericEventHandler[Tx]{
+	hnd := genericEventHandler[Tx, Ext]{
 		fn:               val,
 		evtParameterType: eventType,
 	}
@@ -44,7 +44,7 @@ func makeEventHandler[Tx Transaction](eventType reflect.Type, fn any) eventHandl
 	switch val.Type().NumIn() {
 	case 2:
 		ctxType := val.Type().In(0)
-		if !reflect.TypeOf(&OpContext[Tx]{}).AssignableTo(ctxType) {
+		if !reflect.TypeOf(&OpContext[Tx, Ext]{}).AssignableTo(ctxType) {
 			panic(fmt.Errorf("OpContext[Tx] is not assigned to event handler context parameter %s", ctxType))
 		}
 		hnd.hasContext = true
@@ -62,13 +62,13 @@ func makeEventHandler[Tx Transaction](eventType reflect.Type, fn any) eventHandl
 	return &hnd
 }
 
-type genericEventHandler[Tx Transaction] struct {
+type genericEventHandler[Tx Transaction, Ext any] struct {
 	fn               reflect.Value
 	evtParameterType reflect.Type
 	hasContext       bool
 }
 
-func (h *genericEventHandler[Tx]) Dispatch(op *OpContext[Tx], evt any) error {
+func (h *genericEventHandler[Tx, Ext]) Dispatch(op *OpContext[Tx, Ext], evt any) error {
 	args := make([]reflect.Value, 0, 2)
 
 	if h.hasContext {
