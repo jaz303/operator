@@ -55,12 +55,19 @@ for application services, and then gets out of the way.
 ### Operation
 
 ```golang
-type Operation[Tx, I, O] func(ctx *operator.OpContext[Tx], input *I) (*O, error)
+type Operation[Tx, Ext, I, O] func(ctx *operator.OpContext[Tx, Ext], input *I) (*O, error)
 ```
 
 An operation is a unit of application work, with typed input/output, explicit access to an operation
 context, and no hidden global state. If an operation returns an error (or panics), everything rolls
 back.
+
+**Type Parameters**
+
+  - `Tx`: transaction type; this will usually wrap a database transaction type such as `*sql.Tx`
+  - `Ext`: "extra data" type - application-specific user data associated with each `OpContext`, useful for e.g. per-transaction identity maps
+  - `I`: operation input parameters
+  - `O`: operation output
 
 ### Transactions
 
@@ -75,14 +82,15 @@ Transactions are implemented by adopting a simple 2-method interface: `Commit(co
 and `Rollback(context.Context)` so it's trivial to adapt `operator` to whatever persistence
 system you're using.
 
+**Note:** for operations that _do_ use a transaction unconditionally, `operator` provides a `TxOperation[Tx, Ext, I, O]` type, using which will automatically begin a transaction before passing it to the operation handler.
+
 ### Hub
 
 ```golang
-hub := operator.NewHub(beginTransaction)
+hub := operator.NewHub(beginTransaction, createExtraData)
 ```
 
-`Hub` is the `operator`'s central configuration object. It knows how to start a transaction, as well as
-maintaining a registry of event handlers. All operations are invoked through a `Hub`.
+`Hub` is the `operator`'s central configuration object. It knows how to start a transaction, create per-operation extra data, and maintains a registry of event handlers. All operations are invoked through a `Hub`.
 
 ### Domain Events
 
@@ -99,7 +107,7 @@ events exist with `operator`'s consistency boundary - they are not simply "fire 
 ### After-Commit Hooks
 
 ```golang
-ctx.AfterFunc(func(ctx *OpContext[Tx]) {
+ctx.AfterFunc(func(ctx *OpContext[Tx, Ext]) {
     sendWelcomeEmail(...)
 })
 ```
@@ -129,7 +137,26 @@ The adapter is necessary because `operator`'s methods accept a `context.Context`
 (__Note:__ if you're using `pgx`, its transaction type will drop right in without the need
 for an adapter!)
 
-### 2. Create a Hub
+### 2. (optional) Define the Extra Data type
+
+Application-specified functionality can be associated with each `OpContext` in a type-safe
+manner through use of "extra data". This is useful for implementation of per-operation
+identity maps, caches, etc.
+
+```golang
+type identityMap struct{
+    // cache fields etc
+}
+
+func (i *identityMap) GetUser(id int) *User {
+    // ...
+}
+```
+
+If your application does not require this type of functionality, simply pass `struct{}` as
+the `Ext` type parameter.
+
+### 3. Create a Hub
 
 Next we need a `Hub`. This fulfils two roles:
 
@@ -144,18 +171,22 @@ hub := operator.NewHub(func(ctx context.Context) (Tx, error) {
     tx, err := db.BeginTx(ctx, nil)
     if err != nil { return Tx{}, err }
     return Tx{tx}, nil
+}, func() *identityMap {
+    // If you don't need any application-specific extra data, just use `struct{}`
+    // as the `Ext` type and return an empty struct
+    return newIdentityMap()
 })
 
-hub.RegisterEventHandler(&UserCreated{}, func(ctx *operator.OpContext[Tx], evt *UserCreated) error {
+hub.RegisterEventHandler(&UserCreated{}, func(ctx *operator.OpContext[Tx, *identityMap], evt *UserCreated) error {
     tx, err := ctx.Tx()
     if err != nil { return err }
     return insertAuditLog(tx, "user created", evt.ID)
 })
 ```
 
-### 3. Define an Operation
+### 4. Define an Operation
 
-An Operation is just a Go function that accepts an `*operator.OpContext[Tx]` and input arguments,
+An Operation is just a Go function that accepts an `*operator.OpContext[Tx, Ext]` and input arguments,
 and returns an output value or error.
 
 Note that operation implementations never commit or roll back transactions directly -
@@ -170,7 +201,7 @@ type CreateUserOutput struct {
     ID int64
 }
 
-func CreateUser(ctx *operator.OpContext[Tx], in *CreateUserInput) (*CreateUserOutput, error) {
+func CreateUser(ctx *operator.OpContext[Tx, Ext], in *CreateUserInput) (*CreateUserOutput, error) {
     tx, err := ctx.Tx()
     if err != nil { return nil, err }
 
@@ -183,7 +214,7 @@ func CreateUser(ctx *operator.OpContext[Tx], in *CreateUserInput) (*CreateUserOu
 }
 ```
 
-### 4. Invoke the Operation
+### 5. Invoke the Operation
 
 ```golang
 out, err := operator.Invoke(ctx, hub, CreateUser, &CreateUserInput{
@@ -208,11 +239,13 @@ func HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-Input, output, and error mapping is fully configurable and can be as simple or as complex as you need. Whether your input
-and output types map directly to JSON, or if you require something deeper, `operator` can adapt.
+Input, output, and error mapping is fully configurable and can be as simple or as complex as you need. Whether your input and output types map directly to JSON, or if you require something deeper, `operator` can adapt.
 
-At the moment, only the stdlib's HTTP handler signature is supported - support for more frameworks will be added soon (PRs
-gladly accepted!).
+Bindings to additional HTTP libraries:
+
+  - `echobind/v2` - support for `labstack/echo` (v5)
+
+PR's gladly accepted for bindings to other popular Go routers!
 
 ## Copyright & License
 
